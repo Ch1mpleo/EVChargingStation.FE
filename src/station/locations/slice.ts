@@ -42,7 +42,7 @@ const locationsSlice = createSlice({
             .addCase(fetchLocations.fulfilled, (state, action) => {
                 state.status = 'succeeded'
                 state.items = action.payload.items
-                const { items, ...rest } = action.payload
+                const { ...rest } = action.payload
                 state.page = rest
             })
             .addCase(fetchLocations.rejected, (state, action) => {

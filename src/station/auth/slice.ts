@@ -6,6 +6,7 @@ import type {
     TokenPair,
     RefreshTokenRequest,
 } from './types'
+import { tokenStorage } from '../../utils/tokenStorage'
 
 export type AuthState = {
     accessToken: string | null
@@ -15,8 +16,8 @@ export type AuthState = {
 }
 
 const initialState: AuthState = {
-    accessToken: null,
-    refreshToken: null,
+    accessToken: tokenStorage.getAccessToken(),
+    refreshToken: tokenStorage.getRefreshToken(),
     status: 'idle',
     error: null,
 }
@@ -60,9 +61,11 @@ const authSlice = createSlice({
             if (action.payload) {
                 state.accessToken = action.payload.accessToken
                 state.refreshToken = action.payload.refreshToken
+                tokenStorage.setTokens(action.payload.accessToken, action.payload.refreshToken)
             } else {
                 state.accessToken = null
                 state.refreshToken = null
+                tokenStorage.clearTokens()
             }
         },
     },
@@ -76,6 +79,7 @@ const authSlice = createSlice({
                 state.status = 'succeeded'
                 state.accessToken = action.payload.accessToken
                 state.refreshToken = action.payload.refreshToken
+                tokenStorage.setTokens(action.payload.accessToken, action.payload.refreshToken)
             })
             .addCase(loginThunk.rejected, (state, action) => {
                 state.status = 'failed'
@@ -85,10 +89,12 @@ const authSlice = createSlice({
                 state.accessToken = null
                 state.refreshToken = null
                 state.status = 'idle'
+                tokenStorage.clearTokens()
             })
             .addCase(refreshTokenThunk.fulfilled, (state, action) => {
                 state.accessToken = action.payload.accessToken
                 state.refreshToken = action.payload.refreshToken
+                tokenStorage.setTokens(action.payload.accessToken, action.payload.refreshToken)
             })
     },
 })
