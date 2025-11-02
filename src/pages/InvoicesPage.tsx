@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
@@ -11,8 +11,8 @@ import {
 } from '../station/invoices/slice'
 import { fetchSessions } from '../station/sessions/slice'
 import { logoutThunk } from '../station/auth/slice'
-import type { Invoice, InvoiceStatus } from '../station/invoices/types'
-import { Pencil, Trash2, DollarSign, XCircle } from 'lucide-react'
+import type { Invoice, InvoiceStatus, GetInvoicesQuery } from '../station/invoices/types'
+import { Pencil, Trash2, DollarSign, XCircle, Search, ArrowUpDown, X } from 'lucide-react'
 
 const InvoicesPage: React.FC = () => {
     const dispatch = useAppDispatch()
@@ -22,6 +22,13 @@ const InvoicesPage: React.FC = () => {
     const { accessToken } = useAppSelector((s) => s.auth)
 
     const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize] = useState(5)
+    const [search, setSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+    const [sortBy, setSortBy] = useState<string>('')
+    const [isDescending, setIsDescending] = useState(false)
+    const prevDebouncedSearch = useRef('')
+    const prevSortBy = useRef('')
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -50,13 +57,78 @@ const InvoicesPage: React.FC = () => {
             navigate('/login')
             return
         }
-        dispatch(fetchInvoices({ page: currentPage, pageSize: 10 }))
-        dispatch(fetchSessions({ page: 1, pageSize: 100 }))
-    }, [dispatch, currentPage, accessToken, navigate])
+
+        dispatch(fetchSessions({ page: 1, pageSize: 5 }))
+    }, [dispatch, accessToken, navigate])
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search)
+        }, 500)
+
+        return () => clearTimeout(timer)
+    }, [search])
+
+    // Fetch invoices when dependencies change
+    // Reset to page 1 when search or filters change (but not pagination)
+    useEffect(() => {
+        if (!accessToken) return
+
+        // Check if filters actually changed
+        const searchChanged = prevDebouncedSearch.current !== debouncedSearch
+        const sortChanged = prevSortBy.current !== sortBy
+        const filterChanged = searchChanged || sortChanged
+
+        // Reset to page 1 when filters change (not when just paginating)
+        if (filterChanged && currentPage !== 1) {
+            prevDebouncedSearch.current = debouncedSearch
+            prevSortBy.current = sortBy
+            setCurrentPage(1)
+            return // Skip fetch, let the page change trigger a new fetch
+        }
+
+        // Update refs after checking
+        if (searchChanged) prevDebouncedSearch.current = debouncedSearch
+        if (sortChanged) prevSortBy.current = sortBy
+
+        const query: GetInvoicesQuery = {
+            page: currentPage,
+            pageSize,
+        }
+
+        if (debouncedSearch.trim()) {
+            query.search = debouncedSearch.trim()
+        }
+        if (sortBy) {
+            query.sortBy = sortBy
+            query.isDescending = isDescending
+        }
+
+        dispatch(fetchInvoices(query))
+    }, [dispatch, currentPage, debouncedSearch, sortBy, isDescending, pageSize, accessToken])
 
     const handleLogout = async () => {
         await dispatch(logoutThunk())
         navigate('/login')
+    }
+
+    const handleClearFilters = () => {
+        setSearch('')
+        setSortBy('')
+        setIsDescending(false)
+        setCurrentPage(1)
+    }
+
+    const hasActiveFilters = search.trim() !== '' || sortBy !== ''
+
+    const handleSortChange = (field: string) => {
+        if (sortBy === field) {
+            setIsDescending(!isDescending)
+        } else {
+            setSortBy(field)
+            setIsDescending(false)
+        }
     }
 
     const openCreateDialog = () => {
@@ -93,7 +165,7 @@ const InvoicesPage: React.FC = () => {
         e.preventDefault()
         await dispatch(createInvoiceFromSessionThunk(createFormData))
         setIsCreateDialogOpen(false)
-        dispatch(fetchInvoices({ page: currentPage, pageSize: 10 }))
+        // Refresh will be handled by the useEffect
     }
 
     const handleEditSubmit = async (e: React.FormEvent) => {
@@ -183,6 +255,101 @@ const InvoicesPage: React.FC = () => {
                     >
                         + Create Invoice
                     </button>
+                </div>
+
+                {/* Search and Filter Section */}
+                <div className="mb-6 bg-white rounded-lg shadow p-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                        {/* Search Input */}
+                        <div className="flex-1">
+                            <label
+                                htmlFor="search"
+                                className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Search
+                            </label>
+                            <div className="relative">
+                                <Search
+                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                    size={18}
+                                />
+                                <input
+                                    id="search"
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search by customer name, email..."
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                />
+                                {search && (
+                                    <button
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Sort By */}
+                        <div className="md:w-48">
+                            <label
+                                htmlFor="sortBy"
+                                className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Sort By
+                            </label>
+                            <select
+                                id="sortBy"
+                                value={sortBy}
+                                onChange={(e) => handleSortChange(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            >
+                                <option value="">None</option>
+                                <option value="totalAmount">Total Amount</option>
+                                <option value="amountDue">Amount Due</option>
+                                <option value="dueDate">Due Date</option>
+                                <option value="periodStart">Period Start</option>
+                                <option value="createdAt">Created Date</option>
+                                <option value="userFullName">Customer Name</option>
+                            </select>
+                        </div>
+
+                        {/* Sort Direction */}
+                        {sortBy && (
+                            <div className="md:w-40">
+                                <label
+                                    htmlFor="sortDirection"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Order
+                                </label>
+                                <button
+                                    onClick={() => setIsDescending(!isDescending)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                                >
+                                    <ArrowUpDown size={18} className="text-gray-600" />
+                                    <span className="text-sm text-gray-700">
+                                        {isDescending ? 'Descending' : 'Ascending'}
+                                    </span>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Clear Filters */}
+                        {hasActiveFilters && (
+                            <div className="flex items-end">
+                                <button
+                                    onClick={handleClearFilters}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+                                >
+                                    <X size={16} />
+                                    Clear Filters
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {status === 'loading' && (
