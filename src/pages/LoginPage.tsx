@@ -14,7 +14,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault()
     const result = await dispatch(loginThunk({ email, password }))
     if (loginThunk.fulfilled.match(result)) {
-      navigate('/stations')
+      navigate('/reservations')
     }
   }
 

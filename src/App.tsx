@@ -1,14 +1,14 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
-import StationsPage from './pages/StationsPage'
+import ReservationPage from './pages/ReservationPage'
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/stations" element={<StationsPage />} />
+        <Route path="/reservations" element={<ReservationPage />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

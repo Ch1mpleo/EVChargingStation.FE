@@ -8,48 +8,19 @@ export type ApiEnvelope<T> = {
     error: unknown | null
 }
 
-export type StationStatus = 'Offline' | 'Online'
+export type ConnectorType = 'CHAdeMO' | 'CCS' | 'AC'
 
-export type Station = {
-    id: string
+export type Connector = {
+    connectorId: string
+    connectorType: ConnectorType
+    powerKw: number
+}
+
+export type StationWithConnectors = {
+    stationId: string
     name: string
-    locationId: string
-    status: StationStatus
-    createdAt: string
+    connectors: Connector[]
 }
 
-export type Paged<T> = {
-    items: T[]
-    currentPage: number
-    totalPages: number
-    pageSize: number
-    totalCount: number
-    hasPrevious: boolean
-    hasNext: boolean
-}
-
-export type GetStationsQuery = {
-    pageNumber?: number
-    pageSize?: number
-    status?: StationStatus
-    locationId?: string
-}
-
-export type CreateStationRequest = {
-    name: string
-    locationId: string
-    status: StationStatus
-}
-
-export type UpdateStationRequest = {
-    id: string
-    name: string
-    locationId: string
-    status: StationStatus
-}
-
-export type GetStationsResponse = ApiEnvelope<Paged<Station>>
-export type StationResponse = ApiEnvelope<Station>
-export type DeleteStationResponse = ApiEnvelope<string>
-
+export type GetStationsWithConnectorsResponse = ApiEnvelope<StationWithConnectors[]>
 
