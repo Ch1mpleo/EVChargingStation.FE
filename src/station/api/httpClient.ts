@@ -32,7 +32,6 @@ httpClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
 
-        // If 401 and we haven't retried yet, try to refresh token
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true
 
@@ -47,17 +46,14 @@ httpClient.interceptors.response.use(
                         const { accessToken, refreshToken: newRefreshToken } = data.value.data
                         tokenStorage.setTokens(accessToken, newRefreshToken)
 
-                        // Retry original request with new token
                         originalRequest.headers.Authorization = `Bearer ${accessToken}`
                         return httpClient(originalRequest)
                     }
                 } catch {
-                    // Refresh failed, clear tokens and redirect to login
                     tokenStorage.clearTokens()
                     window.location.href = '/login'
                 }
             } else {
-                // No refresh token, redirect to login
                 tokenStorage.clearTokens()
                 window.location.href = '/login'
             }

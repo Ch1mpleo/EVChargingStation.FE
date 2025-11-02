@@ -71,16 +71,13 @@ const InvoicesPage: React.FC = () => {
     }, [search])
 
     // Fetch invoices when dependencies change
-    // Reset to page 1 when search or filters change (but not pagination)
     useEffect(() => {
         if (!accessToken) return
 
-        // Check if filters actually changed
         const searchChanged = prevDebouncedSearch.current !== debouncedSearch
         const sortChanged = prevSortBy.current !== sortBy
         const filterChanged = searchChanged || sortChanged
 
-        // Reset to page 1 when filters change (not when just paginating)
         if (filterChanged && currentPage !== 1) {
             prevDebouncedSearch.current = debouncedSearch
             prevSortBy.current = sortBy
@@ -88,7 +85,6 @@ const InvoicesPage: React.FC = () => {
             return // Skip fetch, let the page change trigger a new fetch
         }
 
-        // Update refs after checking
         if (searchChanged) prevDebouncedSearch.current = debouncedSearch
         if (sortChanged) prevSortBy.current = sortBy
 
