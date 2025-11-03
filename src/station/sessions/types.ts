@@ -46,3 +46,7 @@ export type GetSessionsQuery = {
 
 export type GetSessionsResponse = ApiEnvelope<Paged<Session>>
 
+// Uninvoiced sessions share the same shape as general sessions
+export type GetUninvoicedSessionsQuery = GetSessionsQuery
+export type GetUninvoicedSessionsResponse = GetSessionsResponse
+

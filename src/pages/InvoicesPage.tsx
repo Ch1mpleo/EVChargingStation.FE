@@ -9,7 +9,7 @@ import {
     payInvoiceThunk,
     cancelInvoiceThunk,
 } from '../station/invoices/slice'
-import { fetchSessions } from '../station/sessions/slice'
+import { fetchUninvoicedSessions } from '../station/sessions/slice'
 import { logoutThunk } from '../station/auth/slice'
 import type { Invoice, InvoiceStatus, GetInvoicesQuery } from '../station/invoices/types'
 import { Pencil, Trash2, DollarSign, XCircle, Search, ArrowUpDown, X } from 'lucide-react'
@@ -58,7 +58,7 @@ const InvoicesPage: React.FC = () => {
             return
         }
 
-        dispatch(fetchSessions({ page: 1, pageSize: 5 }))
+        dispatch(fetchUninvoicedSessions({ page: 1, pageSize: 100 }))
     }, [dispatch, accessToken, navigate])
 
     // Debounce search

@@ -29,6 +29,20 @@ export const fetchSessions = createAsyncThunk(
   },
 )
 
+export const fetchUninvoicedSessions = createAsyncThunk(
+  'sessions/fetchUninvoiced',
+  async (query: GetSessionsQuery, { rejectWithValue }) => {
+    try {
+      const res = await api.getUninvoicedSessions(query)
+      if (!res.isSuccess)
+        return rejectWithValue('Fetch uninvoiced sessions failed')
+      return res.value.data
+    } catch {
+      return rejectWithValue('Fetch uninvoiced sessions failed')
+    }
+  },
+)
+
 const sessionsSlice = createSlice({
   name: 'sessions',
   initialState,
@@ -48,6 +62,22 @@ const sessionsSlice = createSlice({
       .addCase(fetchSessions.rejected, (state, action) => {
         state.status = 'failed'
         state.error = String(action.payload ?? 'Fetch sessions failed')
+      })
+      .addCase(fetchUninvoicedSessions.pending, (state) => {
+        state.status = 'loading'
+        state.error = null
+      })
+      .addCase(fetchUninvoicedSessions.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        state.items = action.payload.items
+        const { ...rest } = action.payload
+        state.page = rest
+      })
+      .addCase(fetchUninvoicedSessions.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = String(
+          action.payload ?? 'Fetch uninvoiced sessions failed',
+        )
       })
   },
 })
