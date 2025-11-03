@@ -1,33 +1,36 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { fetchStations, createStationThunk, updateStationThunk, deleteStationThunk } from '../station/stations/slice'
-import { fetchLocations } from '../station/locations/slice'
+import { fetchPlans, createPlanThunk, updatePlanThunk, deletePlanThunk } from '../station/plans/slice'
+import type { Plan } from '../station/plans/types'
 import { logoutThunk } from '../station/auth/slice'
-import type { Station, StationStatus } from '../station/stations/types'
 import { Pencil, Trash2 } from 'lucide-react'
 
-const StationsPage: React.FC = () => {
+const PlansPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const { items: stations, page, status } = useAppSelector((s) => s.stations)
-  const { items: locations } = useAppSelector((s) => s.locations)
+  const { items: plans, page, status } = useAppSelector((s) => s.plans)
   const { accessToken } = useAppSelector((s) => s.auth)
 
   const [currentPage, setCurrentPage] = useState(1)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [editingStation, setEditingStation] = useState<Station | null>(null)
-  const [deletingStation, setDeletingStation] = useState<Station | null>(null)
-  const [formData, setFormData] = useState({ name: '', locationId: '', status: 'Online' as StationStatus })
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
+  const [deletingPlan, setDeletingPlan] = useState<Plan | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    type: 'Prepaid',
+    price: 0,
+    maxDailyKwh: 0 as number | null,
+  })
 
   useEffect(() => {
     if (!accessToken) {
       navigate('/login')
       return
     }
-    dispatch(fetchStations({ pageNumber: currentPage, pageSize: 5 }))
-    dispatch(fetchLocations({}))
+    dispatch(fetchPlans({ page: currentPage, pageSize: 5 }))
   }, [dispatch, currentPage, accessToken, navigate])
 
   const handleLogout = async () => {
@@ -36,46 +39,52 @@ const StationsPage: React.FC = () => {
   }
 
   const openCreateDialog = () => {
-    setEditingStation(null)
-    setFormData({ name: '', locationId: '', status: 'Online' })
+    setEditingPlan(null)
+    setFormData({ name: '', description: '', type: 'Prepaid', price: 0, maxDailyKwh: 0 })
     setIsDialogOpen(true)
   }
 
-  const openEditDialog = (station: Station) => {
-    setEditingStation(station)
-    setFormData({ name: station.name, locationId: station.locationId, status: station.status })
+  const openEditDialog = (plan: Plan) => {
+    setEditingPlan(plan)
+    setFormData({
+      name: plan.name,
+      description: plan.description,
+      type: plan.type,
+      price: plan.price,
+      maxDailyKwh: plan.maxDailyKwh,
+    })
     setIsDialogOpen(true)
   }
 
   const closeDialog = () => {
     setIsDialogOpen(false)
-    setEditingStation(null)
+    setEditingPlan(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingStation) {
-      await dispatch(updateStationThunk({ id: editingStation.id, ...formData }))
+    if (editingPlan) {
+      await dispatch(updatePlanThunk({ id: editingPlan.hoaHTTID, ...formData }))
     } else {
-      await dispatch(createStationThunk(formData))
+      await dispatch(createPlanThunk(formData))
     }
     closeDialog()
-    dispatch(fetchStations({ pageNumber: currentPage, pageSize: 5 }))
+    dispatch(fetchPlans({ page: currentPage, pageSize: 5 }))
   }
 
-  const openDeleteDialog = (station: Station) => {
-    setDeletingStation(station)
+  const openDeleteDialog = (plan: Plan) => {
+    setDeletingPlan(plan)
     setIsDeleteDialogOpen(true)
   }
 
   const closeDeleteDialog = () => {
     setIsDeleteDialogOpen(false)
-    setDeletingStation(null)
+    setDeletingPlan(null)
   }
 
   const handleDelete = async () => {
-    if (deletingStation) {
-      await dispatch(deleteStationThunk(deletingStation.id))
+    if (deletingPlan) {
+      await dispatch(deletePlanThunk(deletingPlan.hoaHTTID))
       closeDeleteDialog()
     }
   }
@@ -84,7 +93,7 @@ const StationsPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Charging Stations</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Plans</h1>
           <button
             onClick={handleLogout}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
@@ -97,13 +106,13 @@ const StationsPage: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex justify-between items-center">
           <p className="text-gray-600">
-            {page && `Showing ${stations.length} of ${page.totalCount} stations`}
+            {page && `Showing ${plans.length} of ${page.totalCount} plans`}
           </p>
           <button
             onClick={openCreateDialog}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow-md hover:shadow-lg"
           >
-            + Add Station
+            + Add Plan
           </button>
         </div>
 
@@ -119,40 +128,33 @@ const StationsPage: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Daily kWh</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {stations.map((station) => {
-                  const location = locations.find((l) => l.id === station.locationId)
+                {plans.map((plan) => {
                   return (
-                    <tr key={station.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{station.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{location?.name || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${station.status === 'Online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                          {station.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(station.createdAt).toLocaleDateString()}
-                      </td>
+                    <tr key={plan.hoaHTTID} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{plan.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{plan.type}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{plan.price.toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{plan.maxDailyKwh ?? 'Unlimited'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end items-center gap-2">
                           <button
-                            onClick={() => openEditDialog(station)}
+                            onClick={() => openEditDialog(plan)}
                             className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
-                            title="Edit station"
+                            title="Edit plan"
                           >
                             <Pencil size={18} />
                           </button>
                           <button
-                            onClick={() => openDeleteDialog(station)}
+                            onClick={() => openDeleteDialog(plan)}
                             className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
-                            title="Delete station"
+                            title="Delete plan"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -193,12 +195,12 @@ const StationsPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingStation ? 'Edit Station' : 'Add New Station'}
+              {editingPlan ? 'Edit Plan' : 'Add New Plan'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Station Name
+                  Plan Name
                 </label>
                 <input
                   id="name"
@@ -210,38 +212,60 @@ const StationsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                  Location
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                  Type
                 </label>
                 <select
-                  id="location"
-                  value={formData.locationId}
-                  onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                  id="type"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 >
-                  <option value="">Select a location</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name} - {loc.city}
-                    </option>
-                  ))}
+                  <option value="Prepaid">Prepaid</option>
+                  <option value="Postpaid">Postpaid</option>
+                  <option value="VIP">VIP</option>
                 </select>
               </div>
               <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Price
                 </label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as StationStatus })}
+                <input
+                  id="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  <option value="Online">Online</option>
-                  <option value="Offline">Offline</option>
-                </select>
+                />
+              </div>
+              <div>
+                <label htmlFor="maxDailyKwh" className="block text-sm font-medium text-gray-700 mb-1">
+                  Max Daily kWh (leave 0 for unlimited)
+                </label>
+                <input
+                  id="maxDailyKwh"
+                  type="number"
+                  value={formData.maxDailyKwh ?? 0}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    setFormData({ ...formData, maxDailyKwh: v === 0 ? null : v })
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
               </div>
               <div className="flex justify-end space-x-3 pt-4">
                 <button
@@ -255,7 +279,7 @@ const StationsPage: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-md hover:shadow-lg"
                 >
-                  {editingStation ? 'Update' : 'Create'}
+                  {editingPlan ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
@@ -263,7 +287,7 @@ const StationsPage: React.FC = () => {
         </div>
       )}
 
-      {isDeleteDialogOpen && deletingStation && (
+      {isDeleteDialogOpen && deletingPlan && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-4 mb-4">
@@ -271,13 +295,13 @@ const StationsPage: React.FC = () => {
                 <Trash2 className="text-red-600" size={24} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Delete Station</h2>
+                <h2 className="text-xl font-bold text-gray-900">Delete Plan</h2>
                 <p className="text-sm text-gray-600 mt-1">This action cannot be undone</p>
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-gray-700">
-                Are you sure you want to delete <span className="font-semibold">{deletingStation.name}</span>?
+                Are you sure you want to delete <span className="font-semibold">{deletingPlan.name}</span>?
               </p>
             </div>
             <div className="flex justify-end space-x-3">
@@ -293,7 +317,7 @@ const StationsPage: React.FC = () => {
                 onClick={handleDelete}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-md hover:shadow-lg"
               >
-                Delete Station
+                Delete Plan
               </button>
             </div>
           </div>
@@ -303,5 +327,5 @@ const StationsPage: React.FC = () => {
   )
 }
 
-export default StationsPage
+export default PlansPage
 

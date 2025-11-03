@@ -1,13 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authReducer from '../station/auth/slice'
-import locationsReducer from '../station/locations/slice'
-import stationsReducer from '../station/stations/slice'
+import plansReducer from '../station/plans/slice'
 
 export const store = configureStore({
     reducer: {
         auth: authReducer,
-        locations: locationsReducer,
-        stations: stationsReducer,
+        plans: plansReducer,
     },
 })
 
