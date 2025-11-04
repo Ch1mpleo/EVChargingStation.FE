@@ -137,6 +137,7 @@ const InvoicesPage: React.FC = () => {
 
     const openCreateDialog = () => {
         setCreateFormData({ sessionId: '', taxRate: 10, dueDays: 7 })
+        dispatch(fetchUninvoicedSessions({ page: 1, pageSize: 100 }))
         setIsCreateDialogOpen(true)
     }
 
