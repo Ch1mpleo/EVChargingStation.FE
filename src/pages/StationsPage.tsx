@@ -15,6 +15,9 @@ const StationsPage: React.FC = () => {
   const { accessToken } = useAppSelector((s) => s.auth)
 
   const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'' | StationStatus>('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [editingStation, setEditingStation] = useState<Station | null>(null)
@@ -29,6 +32,24 @@ const StationsPage: React.FC = () => {
     dispatch(fetchStations({ pageNumber: currentPage, pageSize: 5 }))
     dispatch(fetchLocations({}))
   }, [dispatch, currentPage, accessToken, navigate])
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 400)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Refetch when filters change
+  useEffect(() => {
+    if (!accessToken) return
+    const query: { pageNumber: number; pageSize: number; search?: string; status?: StationStatus } = {
+      pageNumber: currentPage,
+      pageSize: 5,
+    }
+    if (debouncedSearch.trim()) query.search = debouncedSearch.trim()
+    if (statusFilter) query.status = statusFilter
+    dispatch(fetchStations(query))
+  }, [dispatch, currentPage, debouncedSearch, statusFilter, accessToken])
 
   const handleLogout = async () => {
     await dispatch(logoutThunk())
@@ -105,6 +126,36 @@ const StationsPage: React.FC = () => {
           >
             + Add Station
           </button>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-6 bg-white rounded-lg shadow p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label htmlFor="stationSearch" className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+              <input
+                id="stationSearch"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by station name..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="md:w-48">
+              <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                id="statusFilter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as '' | StationStatus)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              >
+                <option value="">All</option>
+                <option value="Online">Online</option>
+                <option value="Offline">Offline</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {status === 'loading' && (

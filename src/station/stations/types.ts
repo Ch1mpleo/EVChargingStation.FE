@@ -33,6 +33,7 @@ export type GetStationsQuery = {
     pageSize?: number
     status?: StationStatus
     locationId?: string
+    search?: string
 }
 
 export type CreateStationRequest = {
