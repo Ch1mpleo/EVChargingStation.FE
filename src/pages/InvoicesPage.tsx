@@ -11,7 +11,7 @@ import {
 } from '../station/invoices/slice'
 import { fetchUninvoicedSessions } from '../station/sessions/slice'
 import { logoutThunk } from '../station/auth/slice'
-import type { Invoice, InvoiceStatus, GetInvoicesQuery } from '../station/invoices/types'
+import type { Invoice, InvoiceStatus, GetInvoicesQuery, InvoiceFilterStatus } from '../station/invoices/types'
 import { Pencil, Trash2, DollarSign, XCircle, Search, ArrowUpDown, X } from 'lucide-react'
 
 const InvoicesPage: React.FC = () => {
@@ -29,6 +29,8 @@ const InvoicesPage: React.FC = () => {
     const [isDescending, setIsDescending] = useState(false)
     const prevDebouncedSearch = useRef('')
     const prevSortBy = useRef('')
+    const [statusFilter, setStatusFilter] = useState<'' | InvoiceFilterStatus>('')
+    const prevStatusFilter = useRef<'' | InvoiceFilterStatus>('')
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -76,7 +78,8 @@ const InvoicesPage: React.FC = () => {
 
         const searchChanged = prevDebouncedSearch.current !== debouncedSearch
         const sortChanged = prevSortBy.current !== sortBy
-        const filterChanged = searchChanged || sortChanged
+        const statusChanged = prevStatusFilter.current !== statusFilter
+        const filterChanged = searchChanged || sortChanged || statusChanged
 
         if (filterChanged && currentPage !== 1) {
             prevDebouncedSearch.current = debouncedSearch
@@ -87,6 +90,7 @@ const InvoicesPage: React.FC = () => {
 
         if (searchChanged) prevDebouncedSearch.current = debouncedSearch
         if (sortChanged) prevSortBy.current = sortBy
+        if (statusChanged) prevStatusFilter.current = statusFilter
 
         const query: GetInvoicesQuery = {
             page: currentPage,
@@ -100,9 +104,12 @@ const InvoicesPage: React.FC = () => {
             query.sortBy = sortBy
             query.isDescending = isDescending
         }
+        if (statusFilter) {
+            query.status = statusFilter
+        }
 
         dispatch(fetchInvoices(query))
-    }, [dispatch, currentPage, debouncedSearch, sortBy, isDescending, pageSize, accessToken])
+    }, [dispatch, currentPage, debouncedSearch, sortBy, isDescending, statusFilter, pageSize, accessToken])
 
     const handleLogout = async () => {
         await dispatch(logoutThunk())
@@ -114,9 +121,10 @@ const InvoicesPage: React.FC = () => {
         setSortBy('')
         setIsDescending(false)
         setCurrentPage(1)
+        setStatusFilter('')
     }
 
-    const hasActiveFilters = search.trim() !== '' || sortBy !== ''
+    const hasActiveFilters = search.trim() !== '' || sortBy !== '' || statusFilter !== ''
 
     const handleSortChange = (field: string) => {
         if (sortBy === field) {
@@ -332,6 +340,27 @@ const InvoicesPage: React.FC = () => {
                                 </button>
                             </div>
                         )}
+
+                        {/* Status Filter */}
+                        <div className="md:w-48">
+                            <label
+                                htmlFor="statusFilter"
+                                className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Status
+                            </label>
+                            <select
+                                id="statusFilter"
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as '' | InvoiceFilterStatus)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            >
+                                <option value="">All</option>
+                                <option value="Outstanding">Outstanding</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Canceled">Canceled</option>
+                            </select>
+                        </div>
 
                         {/* Clear Filters */}
                         {hasActiveFilters && (

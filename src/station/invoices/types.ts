@@ -42,12 +42,16 @@ export type Paged<T> = {
   hasNext: boolean
 }
 
+// Status that can be used for filtering (server supports a subset)
+export type InvoiceFilterStatus = 'Outstanding' | 'Paid' | 'Canceled'
+
 export type GetInvoicesQuery = {
   search?: string
   sortBy?: string
   isDescending?: boolean
   page?: number
   pageSize?: number
+  status?: InvoiceFilterStatus
 }
 
 export type CreateInvoiceFromSessionRequest = {
