@@ -452,7 +452,7 @@ const InvoicesPage: React.FC = () => {
                                                 >
                                                     <Pencil size={18} />
                                                 </button>
-                                                {invoice.status !== 'Canceled' && (
+                                                {invoice.status !== 'Canceled' && invoice.status !== 'Paid' && (
                                                     <button
                                                         onClick={() => handleCancel(invoice)}
                                                         className="p-2 text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded-lg transition"

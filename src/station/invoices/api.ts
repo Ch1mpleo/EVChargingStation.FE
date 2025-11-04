@@ -58,7 +58,8 @@ export async function payInvoice(
 ): Promise<InvoiceResponse> {
     const { data } = await httpClient.post<InvoiceResponse>(
         `/invoices/${payload.id}/pay`,
-        { amountPaid: payload.amountPaid },
+        null,
+        { params: { amountPaid: payload.amountPaid } },
     )
     return data
 }
